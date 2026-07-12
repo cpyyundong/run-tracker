@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>RunTrack - 跑步打卡社区</title>
+<style>
+  :root {
+    --bg: #0f0f14;
+    --surface: #1a1a24;
+    --surface2: #22222e;
+    --border: #2a2a38;
+    --text: #e2e2e8;
+    --text-muted: #8888a0;
+    --accent: #ff6b35;
+    --accent-glow: rgba(255,107,53,0.25);
+    --accent2: #ff8c5a;
+    --green: #2ecc71;
+    --green-glow: rgba(46,204,113,0.2);
+    --red: #e74c3c;
+    --radius: 14px;
+    --radius-sm: 10px;
+    --transition: 0.2s ease;
+    --nav-h: 64px;
+    --max-w: 720px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{font-size:16px;scroll-behavior:smooth}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC",sans-serif;
+    background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:calc(var(--nav-h) + 20px);
+  }
+  body::before{
+    content:'';position:fixed;inset:0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(255,107,53,0.06), transparent),
+      radial-gradient(ellipse 50% 40% at 80% 90%, rgba(46,204,113,0.04), transparent);
+    pointer-events:none;z-index:0;
+  }
+
+  .container{max-width:var(--max-w);margin:0 auto;padding:20px 16px 0;position:relative;z-index:1}
+
+  /* Tab pages */
+  .tab-page{display:none}
+  .tab-page.active{display:block}
+
+  /* Header */
+  .header{display:flex;align-items:center;gap:12px;padding:8px 0 24px}
+  .logo-icon{
+    width:42px;height:42px;
+    background:linear-gradient(135deg,var(--accent),#e55a2b);
+    border-radius:12px;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 4px 20px var(--accent-glow);flex-shrink:0;
+  }
+  .logo-icon svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:2.5}
+  .header-title{font-size:1.4rem;font-weight:700;letter-spacing:-0.02em}
+  .header-title span{color:var(--accent)}
+
+  /* Stats */
+  .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+  .stat-card{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius);padding:14px 10px;text-align:center;transition:var(--transition)
+  }
+  .stat-card:hover{border-color:var(--accent);box-shadow:0 0 18px var(--accent-glow)}
+  .stat-value{font-size:1.4rem;font-weight:700;color:var(--accent)}
+  .stat-label{font-size:0.75rem;color:var(--text-muted);margin-top:2px}
+
+  /* Card */
+  .card{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius);padding:20px;margin-bottom:16px
+  }
+  .card-title{
+    font-size:1rem;font-weight:600;margin-bottom:16px;
+    display:flex;align-items:center;gap:8px
+  }
+  .card-title svg{width:18px;height:18px;stroke:var(--accent);fill:none;stroke-width:2}
+
+  /* Form */
+  .form-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+  .form-group{display:flex;flex-direction:column;gap:5px}
+  .form-group label{font-size:0.75rem;color:var(--text-muted);font-weight:500}
+  .form-group input{
+    background:var(--surface2);border:1px solid var(--border);
+    border-radius:var(--radius-sm);padding:11px 12px;color:var(--text);
+    font-size:0.92rem;outline:none;transition:var(--transition)
+  }
+  .form-group input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+  .form-group input::placeholder{color:var(--text-muted)}
+  .btn{
+    width:100%;background:linear-gradient(135deg,var(--accent),#e55a2b);
+    color:#fff;border:none;border-radius:var(--radius-sm);padding:13px;
+    font-size:0.95rem;font-weight:600;cursor:pointer;
+    transition:var(--transition);letter-spacing:0.02em
+  }
+  .btn:hover{box-shadow:0 4px 22px var(--accent-glow);transform:translateY(-1px)}
+  .btn:active{transform:translateY(0)}
+  .btn-sm{
+    font-size:0.78rem;padding:6px 14px;border-radius:8px;
+    background:var(--surface2);color:var(--text);border:1px solid var(--border);
+    cursor:pointer;transition:var(--transition)
+  }
+  .btn-sm:hover{border-color:var(--accent)}
+  .btn-sm.accent{background:var(--accent);color:#fff;border:none}
+  .checked-today{background:var(--green)!important;pointer-events:none;box-shadow:0 4px 18px var(--green-glow)!important}
+
+  /* Calendar */
+  .calendar-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .calendar-month{font-size:1rem;font-weight:600}
+  .cal-nav-btn{
+    background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+    color:var(--text);padding:5px 12px;cursor:pointer;font-size:0.82rem;transition:var(--transition)
+  }
+  .cal-nav-btn:hover{border-color:var(--accent)}
+  .weekday-row{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;margin-bottom:4px}
+  .weekday-row span{font-size:0.7rem;color:var(--text-muted);padding:3px 0}
+  .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center}
+  .cal-cell{
+    aspect-ratio:1;border-radius:9px;display:flex;align-items:center;justify-content:center;
+    font-size:0.82rem;transition:var(--transition);cursor:default;color:var(--text-muted)
+  }
+  .cal-cell.in-month{color:var(--text);cursor:pointer}
+  .cal-cell.in-month:hover{background:var(--surface2)}
+  .cal-cell.today{font-weight:700;box-shadow:inset 0 0 0 2px var(--accent)}
+  .cal-cell.checked{
+    background:linear-gradient(135deg,var(--accent),#e55a2b);
+    color:#fff;font-weight:600;box-shadow:0 2px 8px var(--accent-glow)
+  }
+
+  /* History */
+  .history-list{display:flex;flex-direction:column;gap:8px}
+  .history-item{
+    display:flex;align-items:center;gap:12px;
+    background:var(--surface2);border-radius:var(--radius-sm);padding:12px 14px;
+    transition:var(--transition);flex-wrap:wrap
+  }
+  .history-item:hover{background:#2a2a38}
+  .history-date{font-size:0.75rem;color:var(--text-muted);min-width:50px;text-align:center;line-height:1.3}
+  .history-date strong{display:block;font-size:1rem;color:var(--text)}
+  .history-stats{display:flex;gap:16px;flex:1;font-size:0.85rem}
+  .history-stats span{color:var(--text-muted)}
+  .history-stats strong{color:var(--accent);font-weight:600}
+
+  /* Community */
+  .post-composer{
+    background:var(--surface2);border:1px solid var(--border);
+    border-radius:var(--radius);padding:16px;margin-bottom:16px
+  }
+  .post-composer textarea{
+    width:100%;background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius-sm);padding:12px;color:var(--text);
+    font-size:0.9rem;resize:vertical;min-height:60px;outline:none;
+    font-family:inherit;transition:var(--transition)
+  }
+  .post-composer textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+  .composer-bar{display:flex;align-items:center;justify-content:space-between;margin-top:10px;gap:8px;flex-wrap:wrap}
+  .post-card{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius);padding:16px;margin-bottom:12px
+  }
+  .post-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .post-avatar{
+    width:36px;height:36px;border-radius:50%;
+    background:linear-gradient(135deg,var(--accent),#e55a2b);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:0.85rem;color:#fff;flex-shrink:0
+  }
+  .post-meta{font-size:0.78rem;color:var(--text-muted)}
+  .post-meta strong{color:var(--text);font-size:0.85rem}
+  .post-body{font-size:0.9rem;margin-bottom:8px;line-height:1.5}
+  .post-run-tag{
+    display:inline-flex;align-items:center;gap:6px;
+    background:rgba(255,107,53,0.12);border-radius:8px;
+    padding:6px 10px;font-size:0.75rem;color:var(--accent);margin:6px 0
+  }
+  .post-actions{display:flex;gap:16px;margin-top:8px}
+  .post-actions button{
+    background:none;border:none;color:var(--text-muted);font-size:0.78rem;
+    cursor:pointer;display:flex;align-items:center;gap:4px;transition:var(--transition)
+  }
+  .post-actions button:hover{color:var(--accent)}
+  .post-actions button.liked{color:var(--accent)}
+  .comments-section{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+  .comment-item{display:flex;gap:8px;margin-bottom:8px;font-size:0.82rem;align-items:flex-start}
+  .comment-avatar{
+    width:26px;height:26px;border-radius:50%;
+    background:var(--surface2);display:flex;align-items:center;
+    justify-content:center;font-size:0.7rem;color:var(--text-muted);flex-shrink:0
+  }
+  .comment-body{flex:1}
+  .comment-body strong{font-size:0.78rem;margin-right:4px}
+  .comment-input-row{display:flex;gap:8px;margin-top:6px}
+  .comment-input-row input{
+    flex:1;background:var(--surface2);border:1px solid var(--border);
+    border-radius:8px;padding:8px 10px;color:var(--text);font-size:0.82rem;outline:none
+  }
+  .comment-input-row input:focus{border-color:var(--accent)}
+
+  /* Share Canvas */
+  .share-modal-bg{
+    display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);
+    z-index:100;align-items:center;justify-content:center
+  }
+  .share-modal-bg.show{display:flex}
+  .share-modal{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius);padding:20px;max-width:380px;width:90%;
+    text-align:center
+  }
+  .share-modal canvas{border-radius:var(--radius-sm);max-width:100%}
+  .share-btns{display:flex;gap:10px;margin-top:14px;justify-content:center;flex-wrap:wrap}
+
+  /* Knowledge */
+  .knowledge-header{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:16px;gap:10px;flex-wrap:wrap
+  }
+  .weekly-badge{
+    display:inline-flex;align-items:center;gap:6px;
+    background:rgba(46,204,113,0.12);border-radius:20px;
+    padding:5px 14px;font-size:0.75rem;color:var(--green)
+  }
+  .weekly-badge::before{
+    content:'';width:7px;height:7px;background:var(--green);
+    border-radius:50%;animation:pulse 2s infinite
+  }
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+  .knowledge-card{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius);padding:18px;margin-bottom:12px;
+    cursor:pointer;transition:var(--transition);position:relative;overflow:hidden
+  }
+  .knowledge-card:hover{border-color:var(--accent)}
+  .knowledge-card.featured{border-color:var(--accent);box-shadow:0 0 20px var(--accent-glow)}
+  .kc-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .kc-icon{
+    width:36px;height:36px;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:18px
+  }
+  .kc-title{font-weight:600;font-size:0.95rem}
+  .kc-summary{font-size:0.82rem;color:var(--text-muted);margin-bottom:6px;line-height:1.5}
+  .kc-detail{font-size:0.82rem;color:var(--text);line-height:1.7;display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+  .kc-detail.show{display:block}
+  .kc-source{font-size:0.7rem;color:var(--text-muted);margin-top:8px}
+
+  /* Profile */
+  .profile-card{text-align:center;padding:28px 20px}
+  .profile-avatar{
+    width:72px;height:72px;border-radius:50%;
+    background:linear-gradient(135deg,var(--accent),#e55a2b);
+    margin:0 auto 14px;display:flex;align-items:center;justify-content:center;
+    font-size:1.8rem;color:#fff;font-weight:700
+  }
+  .profile-name{font-size:1.2rem;font-weight:600}
+  .profile-bio{font-size:0.82rem;color:var(--text-muted);margin:6px 0 12px}
+  .profile-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+  .ps-val{font-size:1.2rem;font-weight:700;color:var(--accent)}
+  .ps-lbl{font-size:0.72rem;color:var(--text-muted)}
+
+  /* Bottom Nav */
+  .bottom-nav{
+    position:fixed;bottom:0;left:0;right:0;z-index:50;
+    background:rgba(15,15,24,0.92);backdrop-filter:blur(14px);
+    border-top:1px solid var(--border);
+    display:flex;justify-content:space-around;
+    height:var(--nav-h);align-items:center;
+    padding:0 8px env(safe-area-inset-bottom, 8px)
+  }
+  .nav-item{
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    background:none;border:none;color:var(--text-muted);cursor:pointer;
+    font-size:0.68rem;padding:6px 10px;transition:var(--transition)
+  }
+  .nav-item svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2}
+  .nav-item.active{color:var(--accent)}
+
+  /* Modal */
+  .modal-bg{
+    display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);
+    z-index:100;align-items:center;justify-content:center
+  }
+  .modal-bg.show{display:flex}
+  .modal-box{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius);padding:24px;max-width:400px;width:90%
+  }
+  .modal-box h3{font-size:1rem;margin-bottom:14px}
+  .modal-box input,.modal-box textarea{
+    width:100%;background:var(--surface2);border:1px solid var(--border);
+    border-radius:var(--radius-sm);padding:10px;color:var(--text);
+    font-size:0.9rem;outline:none;margin-bottom:10px;font-family:inherit
+  }
+  .modal-box input:focus,.modal-box textarea:focus{border-color:var(--accent)}
+
+  /* Toast */
+  .toast{
+    position:fixed;top:20px;left:50%;transform:translateX(-50%);
+    background:var(--green);color:#fff;padding:10px 24px;border-radius:20px;
+    font-size:0.85rem;z-index:200;opacity:0;transition:opacity 0.3s;pointer-events:none
+  }
+  .toast.show{opacity:1}
+
+  /* Empty */
+  .empty-state{text-align:center;padding:28px 16px;color:var(--text-muted)}
+  .empty-state svg{width:44px;height:44px;stroke:var(--text-muted);opacity:0.4;fill:none;stroke-width:1.5;margin-bottom:8px}
+
+  /* Responsive */
+  @media(max-width:480px){
+    .container{padding:14px 10px 0}
+    .form-row{grid-template-columns:1fr}
+    .history-stats{gap:8px;font-size:0.78rem}
+    .stat-value{font-size:1.2rem}
+    .stat-card{padding:10px 6px}
+    .header-title{font-size:1.2rem}
+    .post-actions{gap:10px}
+  }
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- ========== Tab: 打卡 ========== -->
+<div class="tab-page active" id="tab-checkin">
+<div class="container">
+
+  <div class="header">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><polyline points="13 6 19 12 13 18"/><polyline points="5 6 11 12 5 18"/></svg>
+    </div>
+    <div class="header-title">Run<span>Track</span></div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-value" id="statDays">0</div><div class="stat-label">累计天数</div></div>
+    <div class="stat-card"><div class="stat-value" id="statDist">0.0</div><div class="stat-label">总里程 (km)</div></div>
+    <div class="stat-card"><div class="stat-value" id="statTime">0h</div><div class="stat-label">总时长</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 15"/></svg>
+      今日打卡
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>距离 (km)</label>
+        <input type="number" id="distance" placeholder="如 5.0" step="0.1" min="0" inputmode="decimal">
+      </div>
+      <div class="form-group">
+        <label>时长 (min)</label>
+        <input type="number" id="duration" placeholder="如 30" step="1" min="0" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label>卡路里 (自动估算)</label>
+        <input type="number" id="calories" placeholder="自动计算" readonly style="opacity:0.75">
+      </div>
+    </div>
+    <button class="btn" id="btnCheckin" onclick="doCheckin()"><span id="btnCheckinText">打卡</span></button>
+    <div style="margin-top:10px;font-size:0.72rem;color:var(--text-muted)" id="checkinHint"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+      打卡日历
+    </div>
+    <div class="calendar-header">
+      <button class="cal-nav-btn" onclick="changeMonth(-1)">← 上月</button>
+      <div class="calendar-month" id="calMonth"></div>
+      <button class="cal-nav-btn" onclick="changeMonth(1)">下月 →</button>
+    </div>
+    <div class="weekday-row"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+    <div class="calendar-grid" id="calendarGrid"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      最近记录
+    </div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+
+</div>
+</div>
+
+<!-- ========== Tab: 社区 ========== -->
+<div class="tab-page" id="tab-community">
+<div class="container">
+
+  <div class="header">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 22c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+    </div>
+    <div class="header-title">跑步<span>社区</span></div>
+  </div>
+
+  <div class="post-composer">
+    <textarea id="postText" placeholder="分享你的跑步心情..."></textarea>
+    <div class="composer-bar">
+      <span style="font-size:0.75rem;color:var(--text-muted)">今天的跑步数据会自动附带</span>
+      <button class="btn-sm accent" onclick="publishPost()">发布动态</button>
+    </div>
+  </div>
+
+  <div id="postList"></div>
+
+</div>
+</div>
+
+<!-- ========== Tab: 知识 ========== -->
+<div class="tab-page" id="tab-knowledge">
+<div class="container">
+
+  <div class="header">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    </div>
+    <div class="header-title">跑步<span>知识</span></div>
+  </div>
+
+  <div class="knowledge-header">
+    <div class="weekly-badge">每周更新</div>
+    <span style="font-size:0.72rem;color:var(--text-muted)" id="knowUpdated"></span>
+  </div>
+
+  <div style="margin-bottom:12px">
+    <span style="font-size:0.8rem;color:var(--text-muted)">今日推荐</span>
+    <span style="font-size:0.78rem;color:var(--accent);margin-left:8px;cursor:pointer" onclick="shuffleFeatured()">换一批</span>
+  </div>
+
+  <div id="knowledgeList"></div>
+
+</div>
+</div>
+
+<!-- ========== Tab: 我的 ========== -->
+<div class="tab-page" id="tab-profile">
+<div class="container">
+
+  <div class="header">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M4 22c0-5.5 3.6-10 8-10s8 4.5 8 10"/></svg>
+    </div>
+    <div class="header-title">我<span>的</span></div>
+  </div>
+
+  <div class="card profile-card">
+    <div class="profile-avatar" id="profileAvatar">R</div>
+    <div class="profile-name" id="profileName">跑步者</div>
+    <div class="profile-bio" id="profileBio">坚持跑步，热爱生活</div>
+    <div class="profile-stats">
+      <div><div class="ps-val" id="psDays">0</div><div class="ps-lbl">打卡天数</div></div>
+      <div><div class="ps-val" id="psDist">0</div><div class="ps-lbl">总里程 km</div></div>
+      <div><div class="ps-val" id="psPosts">0</div><div class="ps-lbl">社区动态</div></div>
+    </div>
+    <button class="btn-sm" style="margin-top:14px" onclick="openProfileEdit()">编辑资料</button>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">设置</div>
+    <button style="background:transparent;color:var(--red);border:1px solid var(--red);padding:8px 20px;border-radius:var(--radius-sm);cursor:pointer;font-size:0.82rem;transition:var(--transition)" onmouseenter="this.style.background='var(--red)';this.style.color='#fff'" onmouseleave="this.style.background='transparent';this.style.color='var(--red)'" onclick="clearAllData()">清除全部数据</button>
+  </div>
+
+</div>
+</div>
+
+<!-- Share Modal -->
+<div class="share-modal-bg" id="shareModalBg" onclick="closeShareModal(event)">
+  <div class="share-modal" onclick="event.stopPropagation()">
+    <h3 style="margin-bottom:14px;font-size:1rem">打卡分享卡</h3>
+    <canvas id="shareCanvas" width="360" height="500"></canvas>
+    <div class="share-btns">
+      <button class="btn-sm accent" onclick="downloadShareCard()">下载图片</button>
+      <button class="btn-sm" onclick="copyShareLink()">复制链接</button>
+      <button class="btn-sm" onclick="closeShareModal()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- Profile Edit Modal -->
+<div class="modal-bg" id="profileModalBg" onclick="if(event.target===this)closeProfileEdit()">
+  <div class="modal-box">
+    <h3>编辑资料</h3>
+    <input type="text" id="editName" placeholder="昵称">
+    <textarea id="editBio" placeholder="个人简介" rows="2"></textarea>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn-sm accent" onclick="saveProfile()" style="flex:1">保存</button>
+      <button class="btn-sm" onclick="closeProfileEdit()">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <button class="nav-item active" data-tab="tab-checkin" onclick="switchTab('tab-checkin')">
+    <svg viewBox="0 0 24 24"><polyline points="13 6 19 12 13 18"/><polyline points="5 6 11 12 5 18"/></svg>
+    <span>打卡</span>
+  </button>
+  <button class="nav-item" data-tab="tab-community" onclick="switchTab('tab-community')">
+    <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+    <span>社区</span>
+  </button>
+  <button class="nav-item" data-tab="tab-knowledge" onclick="switchTab('tab-knowledge')">
+    <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    <span>知识</span>
+  </button>
+  <button class="nav-item" data-tab="tab-profile" onclick="switchTab('tab-profile')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M4 22c0-5.5 3.6-10 8-10s8 4.5 8 10"/></svg>
+    <span>我的</span>
+  </button>
+</div>
+
+<script>
+/* ===== Data Layer ===== */
+const RK='run_tracker_data', PK='run_tracker_posts', UK='run_tracker_user';
+const load=k=>{try{const r=localStorage.getItem(k);return r?JSON.parse(r):null}catch{return null}};
+const save=(k,v)=>{localStorage.setItem(k,JSON.stringify(v))};
+const runData=()=>{let d=load(RK);return d&&typeof d==='object'?d:{}};
+const postData=()=>{let p=load(PK);return Array.isArray(p)?p:[]};
+const userData=()=>{let u=load(UK);return u&&typeof u==='object'?u:{name:'跑步者',bio:'坚持跑步，热爱生活'}};
+const estCal=d=>Math.round(d*60);
+const dateKey=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const todayKey=()=>dateKey(new Date());
+
+/* Toast */
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000)}
+
+/* ===== Tab Switching ===== */
+function switchTab(tid){
+  document.querySelectorAll('.tab-page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById(tid).classList.add('active');
+  document.querySelector(`[data-tab="${tid}"]`).classList.add('active');
+  if(tid==='tab-checkin')renderCheckin();
+  if(tid==='tab-community')renderPosts();
+  if(tid==='tab-knowledge')renderKnowledge();
+  if(tid==='tab-profile')renderProfile();
+}
+
+/* ===== Checkin ===== */
+let calYear,calMonth;
+function initCal(){const n=new Date();calYear=n.getFullYear();calMonth=n.getMonth()}
+function renderCheckin(){renderStats();renderForm();renderCalendar();renderHistory()}
+
+function renderStats(){
+  const d=runData(),ks=Object.keys(d).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k));
+  let td=0,dist=0,dur=0;ks.forEach(k=>{td++;dist+=d[k].distance||0;dur+=d[k].duration||0});
+  const h=Math.floor(dur/60),m=dur%60;
+  document.getElementById('statDays').textContent=td;
+  document.getElementById('statDist').textContent=dist.toFixed(1);
+  document.getElementById('statTime').textContent=h+'h'+(m?' '+m+'min':'');
+}
+
+function renderForm(){
+  const d=runData(),tk=todayKey();
+  const btn=document.getElementById('btnCheckin'),bt=document.getElementById('btnCheckinText');
+  const hint=document.getElementById('checkinHint'),cal=document.getElementById('calories');
+  if(d[tk]){
+    btn.classList.add('checked-today');bt.textContent='今日已打卡';
+    hint.textContent=`距离 ${d[tk].distance} km | ${d[tk].duration} min | ${d[tk].calories} kcal`;
+    document.getElementById('distance').value=d[tk].distance;
+    document.getElementById('duration').value=d[tk].duration;
+    cal.value=d[tk].calories;
+  }else{btn.classList.remove('checked-today');bt.textContent='打卡';hint.textContent='';}
+}
+document.getElementById('distance').addEventListener('input',function(){const v=parseFloat(this.value)||0;document.getElementById('calories').value=v>0?estCal(v):''});
+document.getElementById('duration').addEventListener('input',function(){const v=parseFloat(document.getElementById('distance').value)||0;if(v>0)document.getElementById('calories').value=estCal(v)});
+
+function doCheckin(){
+  const d=runData(),tk=todayKey();if(d[tk]){toast('今日已打卡');return}
+  const dist=parseFloat(document.getElementById('distance').value),dur=parseInt(document.getElementById('duration').value,10);
+  if(!dist||dist<=0){toast('请输入有效距离');return}
+  if(!dur||dur<=0){toast('请输入有效时长');return}
+  d[tk]={distance:dist,duration:dur,calories:estCal(dist),timestamp:Date.now()};
+  save(RK,d);renderCheckin();toast('打卡成功！');
+}
+
+function renderCalendar(){
+  const d=runData(),td=new Date(),ts=dateKey(td);
+  document.getElementById('calMonth').textContent=calYear+'年 '+(calMonth+1)+'月';
+  const fd=new Date(calYear,calMonth,1),sdow=fd.getDay(),dim=new Date(calYear,calMonth+1,0).getDate(),pmd=new Date(calYear,calMonth,0).getDate();
+  const grid=document.getElementById('calendarGrid');grid.innerHTML='';
+  for(let i=sdow-1;i>=0;i--){const c=document.createElement('div');c.className='cal-cell';c.textContent=pmd-i;grid.appendChild(c)}
+  for(let day=1;day<=dim;day++){
+    const c=document.createElement('div');c.className='cal-cell in-month';
+    const dt=new Date(calYear,calMonth,day),k=dateKey(dt);
+    if(k===ts)c.classList.add('today');if(d[k])c.classList.add('checked');
+    c.textContent=day;
+    (function(kk,el){el.addEventListener('click',function(){if(d[kk])alert(kk+'\n距离: '+d[kk].distance+' km\n时长: '+d[kk].duration+' min\n卡路里: '+d[kk].calories+' kcal')})})(k,c);
+    grid.appendChild(c);
+  }
+  const tc=sdow+dim,rem=tc%7===0?0:7-(tc%7);
+  for(let day=1;day<=rem;day++){const c=document.createElement('div');c.className='cal-cell';c.textContent=day;grid.appendChild(c)}
+}
+function changeMonth(delta){calMonth+=delta;if(calMonth<0){calMonth=11;calYear--}if(calMonth>11){calMonth=0;calYear++}renderCalendar()}
+
+function renderHistory(){
+  const d=runData(),ks=Object.keys(d).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort((a,b)=>b.localeCompare(a));
+  const c=document.getElementById('historyList');
+  if(!ks.length){c.innerHTML=`<div class="empty-state"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg><div>暂无打卡记录</div></div>`;return}
+  c.innerHTML=ks.slice(0,20).map(k=>{
+    const r=d[k],dt=new Date(r.timestamp||k),m=dt.getMonth()+1,day=dt.getDate(),wd=['日','一','二','三','四','五','六'][dt.getDay()];
+    return`<div class="history-item"><div class="history-date"><strong>${m}/${day}</strong>周${wd}</div><div class="history-stats"><span><strong>${r.distance}</strong> km</span><span><strong>${r.duration}</strong> min</span><span><strong>${r.calories}</strong> kcal</span></div><button class="btn-sm" onclick="openShare('${k}')">分享</button><button class="btn-sm" style="color:var(--red);border-color:var(--red)" onclick="deleteRecord('${k}')">删除</button></div>`;
+  }).join('');
+}
+function deleteRecord(key){if(!confirm('确定删除 '+key+' 的记录？'))return;const d=runData();delete d[key];save(RK,d);renderCheckin()}
+
+/* ===== Community ===== */
+function publishPost(){
+  const text=document.getElementById('postText').value.trim();if(!text){toast('请输入内容');return}
+  const d=runData(),tk=todayKey(),todayRun=d[tk]||null;
+  const posts=postData();posts.unshift({id:Date.now(),author:userData().name,text,run:todayRun,time:new Date().toISOString(),likes:[],comments:[]});
+  if(posts.length>100)posts.length=100;
+  save(PK,posts);document.getElementById('postText').value='';renderPosts();toast('发布成功！');
+}
+
+function toggleLike(pid){
+  const posts=postData(),p=posts.find(x=>x.id===pid);if(!p)return;
+  const me=userData().name;
+  if(p.likes.includes(me))p.likes=p.likes.filter(x=>x!==me);else p.likes.push(me);
+  save(PK,posts);renderPosts();
+}
+
+function addComment(pid){
+  const input=document.getElementById('cmt-'+pid);if(!input)return;
+  const text=input.value.trim();if(!text)return;
+  const posts=postData(),p=posts.find(x=>x.id===pid);if(!p)return;
+  p.comments.push({author:userData().name,text,time:new Date().toISOString()});
+  save(PK,posts);renderPosts();
+}
+
+function renderPosts(){
+  const posts=postData(),c=document.getElementById('postList');
+  if(!posts.length){c.innerHTML=`<div class="empty-state"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg><div>暂无动态，快去发布第一条吧</div></div>`;return}
+  c.innerHTML=posts.map(p=>{
+    const t=new Date(p.time),ts=t.toLocaleString('zh-CN',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    const liked=p.likes.includes(userData().name);
+    return`<div class="post-card">
+      <div class="post-header"><div class="post-avatar">${(p.author||'?')[0]}</div><div class="post-meta"><strong>${p.author}</strong><br>${ts}</div></div>
+      <div class="post-body">${esc(p.text)}</div>
+      ${p.run?`<div class="post-run-tag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="13 6 19 12 13 18"/><polyline points="5 6 11 12 5 18"/></svg>今日 ${p.run.distance}km · ${p.run.duration}min · ${p.run.calories}kcal</div>`:''}
+      <div class="post-actions">
+        <button class="${liked?'liked':''}" onclick="toggleLike(${p.id})">♥ ${p.likes.length}</button>
+        <button onclick="document.getElementById('cmt-row-${p.id}').style.display=document.getElementById('cmt-row-${p.id}').style.display==='none'?'flex':'none'">💬 ${p.comments.length}</button>
+      </div>
+      <div class="comments-section" id="cmt-section-${p.id}">${p.comments.map(c=>`<div class="comment-item"><div class="comment-avatar">${(c.author||'?')[0]}</div><div class="comment-body"><strong>${c.author}</strong>${esc(c.text)}</div></div>`).join('')}</div>
+      <div class="comment-input-row" id="cmt-row-${p.id}" style="display:none"><input id="cmt-${p.id}" placeholder="写评论..."><button class="btn-sm accent" onclick="addComment(${p.id})">发送</button></div>
+    </div>`;
+  }).join('');
+}
+function esc(s){const m={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};return s.replace(/[&<>"']/g,c=>m[c])}
+
+/* ===== Share ===== */
+let shareKey=null;
+function openShare(key){shareKey=key;document.getElementById('shareModalBg').classList.add('show');drawShare(key)}
+function closeShareModal(e){if(e&&e.target!==document.getElementById('shareModalBg'))return;document.getElementById('shareModalBg').classList.remove('show')}
+function drawShare(key){
+  const d=runData(),r=d[key];if(!r)return;
+  const cv=document.getElementById('shareCanvas');cv.style.display='block';cv.width=360;cv.height=500;
+  const ctx=cv.getContext('2d');
+  const grad=ctx.createLinearGradient(0,0,360,500);grad.addColorStop(0,'#1a1a24');grad.addColorStop(1,'#0f0f14');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,360,500);
+  ctx.fillStyle='#ff6b35';ctx.fillRect(0,0,360,4);
+  ctx.fillStyle='#e2e2e8';ctx.font='bold 22px -apple-system,sans-serif';ctx.textAlign='center';ctx.fillText('cpyyundong.com 跑步打卡',180,50);
+  ctx.fillStyle='#ff6b35';ctx.font='bold 56px -apple-system,sans-serif';ctx.fillText(r.distance.toFixed(1),180,130);
+  ctx.fillStyle='#8888a0';ctx.font='16px -apple-system,sans-serif';ctx.fillText('公里',180,155);
+  const stats=[{l:'时长',v:r.duration+' min'},{l:'卡路里',v:r.calories+' kcal'},{l:'日期',v:key}];
+  stats.forEach((s,i)=>{const x=30+i*100+50;ctx.fillStyle='#e2e2e8';ctx.font='bold 18px -apple-system,sans-serif';ctx.textAlign='center';ctx.fillText(s.v,x,210);ctx.fillStyle='#8888a0';ctx.font='12px -apple-system,sans-serif';ctx.fillText(s.l,x,230)});
+  ctx.strokeStyle='#2a2a38';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(30,260);ctx.lineTo(330,260);ctx.stroke();
+  ctx.fillStyle='#8888a0';ctx.font='italic 14px -apple-system,sans-serif';ctx.textAlign='center';ctx.fillText('"每一步都算数"',180,300);
+  ctx.strokeStyle='#ff6b35';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo(160,380);ctx.lineTo(160,430);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(160,400);ctx.lineTo(140,390);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(160,400);ctx.lineTo(180,390);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(160,430);ctx.lineTo(140,460);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(160,430);ctx.lineTo(185,465);ctx.stroke();
+  ctx.beginPath();ctx.arc(160,370,10,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle='#8888a0';ctx.font='11px -apple-system,sans-serif';ctx.textAlign='center';ctx.fillText('来自 cpyyundong.com · 跑步打卡社区',180,490);
+}
+function downloadShareCard(){const cv=document.getElementById('shareCanvas');const a=document.createElement('a');a.download='run-share-'+shareKey+'.png';a.href=cv.toDataURL('image/png');a.click();toast('图片已下载')}
+function copyShareLink(){
+  const d=runData(),r=d[shareKey];if(!r)return;
+  const text=`我在 RunTrack 完成了 ${r.distance}km 跑步打卡！\n时长 ${r.duration}min · 消耗 ${r.calories}kcal\n日期: ${shareKey}\n——每一步都算数`;
+  navigator.clipboard.writeText(text).then(()=>toast('已复制到剪贴板')).catch(()=>toast('复制失败'))
+}
+
+/* ===== Knowledge ===== */
+const KNOWLEDGE=[
+  {icon:'🏃',color:'#ff6b35',title:'正确的跑姿',summary:'掌握正确跑姿，避免运动损伤，提高跑步效率。',detail:'保持身体正直微前倾，头部稳定目视前方。双臂以肩为轴前后摆动，前不露肘后不露手。落地时脚掌在身体重心正下方，推荐中前掌或全掌着地。步频建议维持在170-180步/分钟。核心收紧，髋部稳定，减少左右晃动。',source:'Runner\'s World'},
+  {icon:'🫁',color:'#2ecc71',title:'腹式呼吸技巧',summary:'学习腹式呼吸法，提升氧气摄入效率，跑得更远。',detail:'采用"鼻吸口呼"方式，吸气时腹部鼓起，呼气时腹部收缩。节奏可采用2:2（两步一吸两步一呼）或3:3。轻松跑时以能正常交谈为强度参考。避免浅而快的胸式呼吸，这会导致膈肌过早疲劳和侧腹痛。',source:'Nike Run Club'},
+  {icon:'🧘',color:'#3498db',title:'跑前热身与跑后拉伸',summary:'科学的热身与拉伸流程，让每次跑步更安全高效。',detail:'跑前动态热身5-10分钟：开合跳、高抬腿、踢臀跑、弓步转体。跑后静态拉伸每个动作保持20-30秒：股四头肌拉伸、腘绳肌拉伸、小腿拉伸、髋屈肌拉伸、臀肌拉伸。切勿在冷身状态下直接拉伸，先慢走3-5分钟让心率降下来。',source:'中国田径协会'},
+  {icon:'👟',color:'#e67e22',title:'如何选择跑鞋',summary:'根据足型、跑量和路面选择合适的跑鞋，保护双脚。',detail:'判断足型：湿脚踩纸看足弓形态（正常/扁平/高弓）。缓震型适合高弓足，稳定型适合正常足，控制型适合扁平足。跑鞋寿命约500-800公里，建议两双轮换穿着。试鞋时间选在下午（脚会略微肿胀），留出一指空间。新鞋需要30-50km的磨合期。',source:'ASICS Running Lab'},
+  {icon:'🥗',color:'#2ecc71',title:'跑步饮食指南',summary:'跑前、跑中、跑后的营养补充策略。',detail:'跑前1-2小时：低GI碳水+少量蛋白质（如香蕉、全麦面包）。跑步超过60分钟需途中补糖（能量胶每45分钟一条）。跑后30分钟内：碳水+蛋白质3:1比例（如巧克力牛奶、鸡蛋+面包）。日常保证足够碳水摄入（占总热量55-65%），蛋白质1.2-1.6g/kg体重。充分补水，尿液颜色淡黄为宜。',source:'Precision Hydration'},
+  {icon:'🩹',color:'#e74c3c',title:'常见跑步伤病预防',summary:'认识跑步膝、足底筋膜炎、跟腱炎等常见伤病及预防方法。',detail:'跑步膝（髌骨疼痛综合征）：加强股四头肌和臀中肌力量。足底筋膜炎：用网球滚压足底，避免突然增加跑量。跟腱炎：加强离心训练（提踵慢放），充分热身。胫骨骨膜炎：检查跑姿，避免在硬路面跑太多。通用原则：每周跑量增幅不超过10%，重视力量训练和休息日。',source:'British Journal of Sports Medicine'},
+  {icon:'⏱️',color:'#9b59b6',title:'间歇训练入门',summary:'通过间歇训练提升速度和最大摄氧量（VO2max）。',detail:'经典方案：400m×8-12组，组间慢跑200m恢复（配速为5K比赛配速）。进阶：800m×5-6组，组间慢跑400m。法特莱克跑：随意切换快慢节奏。每周1次间歇训练即可，两次高强度训练间隔至少48小时。训练前后充分热身和冷身。',source:'Jack Daniels\' Running Formula'},
+  {icon:'💓',color:'#ff6b35',title:'心率区间训练法',summary:'根据心率区间科学安排训练强度，实现精准训练。',detail:'5个心率区间：Zone1(50-60%)恢复跑、Zone2(60-70%)有氧基础跑、Zone3(70-80%)节奏跑、Zone4(80-90%)乳酸阈值跑、Zone5(90-100%)最大摄氧量跑。80/20法则：80%的训练时间在Zone1-2，20%在Zone4-5。最大心率估算公式：220-年龄，建议实际测试更准确。',source:'Polar Research Center'},
+  {icon:'🏔️',color:'#1abc9c',title:'坡道跑步技巧',summary:'掌握上坡和下坡技巧，征服各种地形。',detail:'上坡：缩短步幅、提高步频，身体微前倾，用前脚掌发力。手臂加大摆动幅度帮助推进。下坡：重心略后移，步幅适中不要跨太大，全掌或后跟着地缓冲。眼睛看前方5-10米而非脚下。坡度超过8%时可考虑走上去，不必勉强。',source:'Trail Runner Magazine'},
+  {icon:'🌙',color:'#34495e',title:'夜跑安全指南',summary:'夜跑的注意事项，确保安全与舒适。',detail:'穿戴反光装备或LED灯带，选择照明良好的路线。逆车流方向跑（面对来车），不带耳机或使用骨传导耳机。告知家人跑步路线和预计返回时间。携带手机和少量现金。避免偏僻路段，结伴跑步更安全。冬季夜跑注意保暖，夏季注意防蚊虫和补水。',source:'Road Runners Club of America'}
+];
+let featIdx=0;
+function renderKnowledge(){
+  document.getElementById('knowUpdated').textContent='最后更新: 2026-07-12';
+  const fi=featIdx%KNOWLEDGE.length;
+  document.getElementById('knowledgeList').innerHTML=KNOWLEDGE.map((k,i)=>{
+    const isF=i===fi;
+    return`<div class="knowledge-card${isF?' featured':''}" onclick="toggleKC(this)">
+      <div class="kc-header"><div class="kc-icon" style="background:${k.color}22;color:${k.color}">${k.icon}</div><div class="kc-title">${k.title}</div></div>
+      <div class="kc-summary">${k.summary}</div>
+      <div class="kc-detail${isF?' show':''}">${k.detail}</div>
+      <div class="kc-source">来源: ${k.source}</div>
+    </div>`;
+  }).join('');
+}
+function toggleKC(el){el.querySelector('.kc-detail').classList.toggle('show');el.classList.toggle('featured')}
+function shuffleFeatured(){featIdx=(featIdx+1)%KNOWLEDGE.length;renderKnowledge()}
+
+/* ===== Profile ===== */
+function renderProfile(){
+  const u=userData();
+  document.getElementById('profileAvatar').textContent=u.name[0];
+  document.getElementById('profileName').textContent=u.name;
+  document.getElementById('profileBio').textContent=u.bio||'';
+  const d=runData(),ks=Object.keys(d).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k));
+  let dist=0;ks.forEach(k=>{dist+=d[k].distance||0});
+  document.getElementById('psDays').textContent=ks.length;
+  document.getElementById('psDist').textContent=dist.toFixed(1);
+  document.getElementById('psPosts').textContent=postData().length;
+}
+function openProfileEdit(){
+  const u=userData();document.getElementById('editName').value=u.name;document.getElementById('editBio').value=u.bio||'';
+  document.getElementById('profileModalBg').classList.add('show');
+}
+function closeProfileEdit(){document.getElementById('profileModalBg').classList.remove('show')}
+function saveProfile(){
+  const name=document.getElementById('editName').value.trim(),bio=document.getElementById('editBio').value.trim();
+  if(!name){toast('昵称不能为空');return}
+  save(UK,{name,bio});closeProfileEdit();renderProfile();toast('资料已保存');
+}
+function clearAllData(){
+  if(!confirm('确定清除全部数据？包括打卡记录、社区动态和个人资料。此操作不可恢复！'))return;
+  localStorage.removeItem(RK);localStorage.removeItem(PK);localStorage.removeItem(UK);
+  renderCheckin();renderPosts();renderProfile();toast('全部数据已清除');
+}
+
+/* ===== Init ===== */
+initCal();renderCheckin();
+if(!postData().length){
+  save(PK,[
+    {id:1710000000001,author:'跑者阿强',text:'今天跑了10公里，配速5分20，状态不错！坚持就是胜利',run:{distance:10,duration:53,calories:600},time:'2026-07-11T07:30:00Z',likes:['晨跑达人','夜跑Lily'],comments:[{author:'晨跑达人',text:'厉害！我明天也去跑',time:'2026-07-11T08:00:00Z'}]},
+    {id:1710000000002,author:'马拉松小张',text:'备战秋季马拉松，今天是长距离训练日，35公里完成！',run:{distance:35,duration:175,calories:2100},time:'2026-07-10T06:00:00Z',likes:['跑者阿强'],comments:[]},
+    {id:1710000000003,author:'夜跑Lily',text:'下雨天室内跑步机5km，汗水不会骗人。',run:{distance:5,duration:28,calories:300},time:'2026-07-09T20:30:00Z',likes:['跑者阿强','晨跑达人','追风少年'],comments:[{author:'追风少年',text:'下雨天也坚持，respect！',time:'2026-07-09T21:00:00Z'}]}
+  ]);
+}
+</script>
+</body>
+</html>
