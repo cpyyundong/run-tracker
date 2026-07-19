@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>RunTrack - 跑步打卡社区</title>
+<style>
+:root {
+  --bg: #0f0f14; --surface: #1a1a24; --surface2: #22222e; --border: #2a2a38;
+  --text: #e2e2e8; --text-muted: #8888a0; --accent: #ff6b35;
+  --accent-glow: rgba(255,107,53,0.25); --accent2: #ff8c5a;
+  --green: #2ecc71; --green-glow: rgba(46,204,113,0.2); --red: #e74c3c;
+  --radius: 14px; --radius-sm: 10px; --transition: 0.2s ease;
+  --nav-h: 64px; --max-w: 720px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{font-size:16px;scroll-behavior:smooth}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC",sans-serif;
+  background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5;
+  -webkit-font-smoothing:antialiased;padding-bottom:calc(var(--nav-h) + 20px);
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 80% 60% at 50% -10%, rgba(255,107,53,0.06), transparent),
+    radial-gradient(ellipse 50% 40% at 80% 90%, rgba(46,204,113,0.04), transparent);
+  pointer-events:none;z-index:0;
+}
+.container{max-width:var(--max-w);margin:0 auto;padding:20px 16px 0;position:relative;z-index:1}
+
+/* Auth */
+.auth-overlay{position:fixed;inset:0;z-index:300;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;padding:20px}
+.auth-overlay::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 50% -10%, rgba(255,107,53,0.08), transparent),radial-gradient(ellipse 50% 40% at 80% 90%, rgba(46,204,113,0.05), transparent);pointer-events:none;z-index:0}
+.auth-card{position:relative;z-index:1;width:100%;max-width:380px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px 28px}
+.auth-logo{text-align:center;margin-bottom:24px}
+.auth-logo .logo-icon{width:56px;height:56px;background:linear-gradient(135deg,var(--accent),#e55a2b);border-radius:16px;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 6px 30px var(--accent-glow)}
+.auth-logo .logo-icon svg{width:28px;height:28px;fill:none;stroke:#fff;stroke-width:2.5}
+.auth-logo h2{font-size:1.6rem;margin-top:12px;font-weight:700}
+.auth-logo h2 span{color:var(--accent)}
+.auth-tabs{display:flex;gap:0;margin-bottom:24px;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}
+.auth-tab{flex:1;padding:10px;text-align:center;background:var(--surface2);color:var(--text-muted);cursor:pointer;font-size:0.88rem;font-weight:500;transition:var(--transition);border:none}
+.auth-tab.active{background:var(--accent);color:#fff}
+.auth-form{display:none}
+.auth-form.active{display:block}
+.auth-form .form-group{margin-bottom:14px}
+.auth-form .form-group label{display:block;font-size:0.78rem;color:var(--text-muted);margin-bottom:5px;font-weight:500}
+.auth-form .form-group input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;color:var(--text);font-size:0.92rem;outline:none;transition:var(--transition)}
+.auth-form .form-group input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.auth-btn{width:100%;background:linear-gradient(135deg,var(--accent),#e55a2b);color:#fff;border:none;border-radius:var(--radius-sm);padding:13px;font-size:0.95rem;font-weight:600;cursor:pointer;margin-top:8px;transition:var(--transition);letter-spacing:0.02em}
+.auth-btn:hover{box-shadow:0 4px 22px var(--accent-glow);transform:translateY(-1px)}
+.auth-btn.secondary{background:transparent;border:1px solid var(--border);color:var(--text-muted)}
+.auth-btn.secondary:hover{color:var(--accent);border-color:var(--accent);box-shadow:none}
+.auth-error{color:var(--red);font-size:0.78rem;margin-top:8px;text-align:center;min-height:20px}
+.auth-success{color:var(--green);font-size:0.78rem;margin-top:8px;text-align:center;min-height:20px}
+
+/* Guest Badge */
+.guest-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);border-radius:20px;padding:4px 12px;font-size:0.72rem;color:var(--accent);margin-left:8px;cursor:pointer;transition:var(--transition)}
+.guest-badge:hover{background:rgba(255,107,53,0.25)}
+.guest-register-prompt{text-align:center;padding:12px;margin:8px 0;background:rgba(255,107,53,0.08);border:1px dashed rgba(255,107,53,0.3);border-radius:var(--radius-sm);font-size:0.8rem;color:var(--text-muted);cursor:pointer}
+.guest-register-prompt:hover{background:rgba(255,107,53,0.15);color:var(--accent)}
+
+/* User Bar */
+.user-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20;gap:8px;flex-wrap:wrap}
+.user-bar-left{display:flex;align-items:center;gap:10px}
+.user-bar-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#e55a2b);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;color:#fff;overflow:hidden;cursor:pointer;flex-shrink:0}
+.user-bar-avatar img{width:100%;height:100%;object-fit:cover}
+.user-bar-name{font-size:0.9rem;font-weight:600}
+.user-bar-logout{background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:8px;padding:5px 14px;font-size:0.75rem;cursor:pointer;transition:var(--transition);white-space:nowrap}
+.user-bar-logout:hover{color:var(--red);border-color:var(--red)}
+
+/* Timer */
+.timer-section{text-align:center;margin-bottom:16px}
+.timer-circle{width:160px;height:160px;border-radius:50%;border:4px solid var(--border);margin:0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:var(--transition);position:relative;background:var(--surface);user-select:none}
+.timer-circle:hover{border-color:var(--accent)}
+.timer-circle.running{border-color:var(--accent);box-shadow:0 0 30px var(--accent-glow);animation:timerPulse 2s infinite}
+.timer-circle.paused{border-color:var(--accent2);animation:none}
+@keyframes timerPulse{0%,100%{box-shadow:0 0 20px var(--accent-glow)}50%{box-shadow:0 0 45px var(--accent-glow),0 0 80px rgba(255,107,53,0.15)}}
+.timer-display{font-size:2.4rem;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text);letter-spacing:0.03em;font-family:'SF Mono','Cascadia Code','Consolas',monospace}
+.timer-display .ms{font-size:1.2rem;color:var(--text-muted)}
+.timer-label{font-size:0.72rem;color:var(--text-muted);margin-top:2px}
+.timer-actions{display:flex;gap:10px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.timer-btn{padding:8px 20px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.82rem;cursor:pointer;transition:var(--transition);min-width:70px}
+.timer-btn:hover{border-color:var(--accent)}
+.timer-btn.primary{background:var(--accent);color:#fff;border:none}
+.timer-btn.primary:hover{box-shadow:0 4px 16px var(--accent-glow)}
+
+/* GPS */
+.gps-section{margin-bottom:12px}
+.gps-toggle{display:inline-flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 18px;color:var(--text-muted);font-size:0.85rem;cursor:pointer;transition:var(--transition)}
+.gps-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.gps-toggle.active{background:rgba(46,204,113,0.1);border-color:var(--green);color:var(--green)}
+.gps-toggle .dot{width:8px;height:8px;border-radius:50%;background:var(--red);transition:var(--transition)}
+.gps-toggle.active .dot{background:var(--green);box-shadow:0 0 8px var(--green-glow);animation:pulse 1.5s infinite}
+.gps-canvas-wrap{display:none;margin-top:8px;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border)}
+.gps-canvas-wrap.show{display:block}
+.gps-canvas-wrap canvas{display:block;width:100%;height:200px;background:#0a0a10}
+.gps-info{font-size:0.72rem;color:var(--text-muted);margin-top:4px;display:none}
+.gps-info.show{display:block}
+.gps-replay-btn{font-size:0.72rem;color:var(--accent);cursor:pointer;margin-left:8px;background:none;border:none;text-decoration:underline}
+
+/* Photo */
+.photo-add-btn{display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:1px dashed var(--border);border-radius:var(--radius-sm);padding:10px 18px;color:var(--text-muted);font-size:0.85rem;cursor:pointer;transition:var(--transition)}
+.photo-add-btn:hover{border-color:var(--accent);color:var(--accent)}
+.photo-preview{display:none;position:relative;margin-top:8px}
+.photo-preview img{max-width:200px;max-height:150px;border-radius:var(--radius-sm);border:1px solid var(--border)}
+.photo-preview .photo-remove{position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;background:var(--red);color:#fff;border:none;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+.photo-thumb{width:48px;height:48px;border-radius:8px;object-fit:cover;border:1px solid var(--border);flex-shrink:0;cursor:pointer;transition:var(--transition)}
+.photo-thumb:hover{transform:scale(1.1)}
+.post-image{max-width:100%;max-height:260px;border-radius:var(--radius-sm);margin:8px 0;cursor:pointer;object-fit:cover;display:block}
+.post-images{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;margin:8px 0}
+
+/* Tabs */
+.tab-page{display:none}
+.tab-page.active{display:block}
+.header{display:flex;align-items:center;gap:12px;padding:8px 0 24px}
+.logo-icon{width:42px;height:42px;background:linear-gradient(135deg,var(--accent),#e55a2b);border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px var(--accent-glow);flex-shrink:0}
+.logo-icon svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:2.5}
+.header-title{font-size:1.4rem;font-weight:700;letter-spacing:-0.02em}
+.header-title span{color:var(--accent)}
+
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 8px;text-align:center;transition:var(--transition)}
+.stat-card:hover{border-color:var(--accent);box-shadow:0 0 18px var(--accent-glow)}
+.stat-value{font-size:1.2rem;font-weight:700;color:var(--accent)}
+.stat-label{font-size:0.68rem;color:var(--text-muted);margin-top:2px}
+.streak-badge{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,var(--accent),#e55a2b);color:#fff;padding:2px 8px;border-radius:10px;font-size:0.65rem;margin-top:4px}
+
+/* Card */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.card-title{font-size:1rem;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title svg{width:18px;height:18px;stroke:var(--accent);fill:none;stroke-width:2}
+
+/* Form */
+.form-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group label{font-size:0.75rem;color:var(--text-muted);font-weight:500}
+.form-group input,.form-group select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 12px;color:var(--text);font-size:0.92rem;outline:none;transition:var(--transition)}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.form-group input::placeholder{color:var(--text-muted)}
+.btn{width:100%;background:linear-gradient(135deg,var(--accent),#e55a2b);color:#fff;border:none;border-radius:var(--radius-sm);padding:13px;font-size:0.95rem;font-weight:600;cursor:pointer;transition:var(--transition);letter-spacing:0.02em}
+.btn:hover{box-shadow:0 4px 22px var(--accent-glow);transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn-sm{font-size:0.78rem;padding:6px 14px;border-radius:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border);cursor:pointer;transition:var(--transition)}
+.btn-sm:hover{border-color:var(--accent)}
+.btn-sm.accent{background:var(--accent);color:#fff;border:none}
+.checked-today{background:var(--green)!important;pointer-events:none;box-shadow:0 4px 18px var(--green-glow)!important}
+
+/* Calendar */
+.calendar-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.calendar-month{font-size:1rem;font-weight:600}
+.cal-nav-btn{background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:5px 12px;cursor:pointer;font-size:0.82rem;transition:var(--transition)}
+.cal-nav-btn:hover{border-color:var(--accent)}
+.weekday-row{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;margin-bottom:4px}
+.weekday-row span{font-size:0.7rem;color:var(--text-muted);padding:3px 0}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center}
+.cal-cell{aspect-ratio:1;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:0.82rem;transition:var(--transition);cursor:default;color:var(--text-muted)}
+.cal-cell.in-month{color:var(--text);cursor:pointer}
+.cal-cell.in-month:hover{background:var(--surface2)}
+.cal-cell.today{font-weight:700;box-shadow:inset 0 0 0 2px var(--accent)}
+.cal-cell.checked{background:linear-gradient(135deg,var(--accent),#e55a2b);color:#fff;font-weight:600;box-shadow:0 2px 8px var(--accent-glow)}
+
+/* History */
+.history-list{display:flex;flex-direction:column;gap:8px}
+.history-item{display:flex;align-items:center;gap:12px;background:var(--surface2);border-radius:var(--radius-sm);padding:12px 14px;transition:var(--transition);flex-wrap:wrap}
+.history-item:hover{background:#2a2a38}
+.history-date{font-size:0.75rem;color:var(--text-muted);min-width:50px;text-align:center;line-height:1.3}
+.history-date strong{display:block;font-size:1rem;color:var(--text)}
+.history-stats{display:flex;gap:16px;flex:1;font-size:0.85rem;flex-wrap:wrap}
+.history-stats span{color:var(--text-muted)}
+.history-stats strong{color:var(--accent);font-weight:600}
+
+/* Community */
+.post-composer{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.post-composer textarea{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;color:var(--text);font-size:0.9rem;resize:vertical;min-height:60px;outline:none;font-family:inherit;transition:var(--transition)}
+.post-composer textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.composer-bar{display:flex;align-items:center;justify-content:space-between;margin-top:10px;gap:8px;flex-wrap:wrap}
+.composer-bar .location-row{display:flex;align-items:center;gap:6px;flex:1;min-width:180px;flex-wrap:wrap}
+.composer-bar .location-row input{flex:1;min-width:100px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-size:0.78rem;outline:none}
+.composer-bar .location-row input:focus{border-color:var(--accent)}
+.location-toggle{display:flex;align-items:center;gap:4px;font-size:0.7rem;color:var(--text-muted);cursor:pointer;white-space:nowrap}
+.post-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.post-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.post-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#e55a2b);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;color:#fff;flex-shrink:0;overflow:hidden;cursor:pointer}
+.post-avatar img{width:100%;height:100%;object-fit:cover}
+.post-meta{font-size:0.78rem;color:var(--text-muted);flex:1}
+.post-meta strong{color:var(--text);font-size:0.85rem}
+.post-body{font-size:0.9rem;margin-bottom:8px;line-height:1.5}
+.post-run-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(255,107,53,0.12);border-radius:8px;padding:6px 10px;font-size:0.75rem;color:var(--accent);margin:6px 0}
+.post-actions{display:flex;gap:16px;margin-top:8px}
+.post-actions button{background:none;border:none;color:var(--text-muted);font-size:0.78rem;cursor:pointer;display:flex;align-items:center;gap:4px;transition:var(--transition)}
+.post-actions button:hover{color:var(--accent)}
+.post-actions button.liked{color:var(--accent)}
+.post-location{font-size:0.72rem;color:var(--text-muted);margin-top:4px}
+.user-badge-sm{font-size:0.62rem;background:linear-gradient(135deg,var(--accent),#e55a2b);color:#fff;padding:1px 6px;border-radius:8px;margin-left:4px}
+.comments-section{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.comment-item{display:flex;gap:8px;margin-bottom:8px;font-size:0.82rem;align-items:flex-start}
+.comment-avatar{width:26px;height:26px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:var(--text-muted);flex-shrink:0}
+.comment-body{flex:1}
+.comment-body strong{font-size:0.78rem;margin-right:4px}
+.comment-input-row{display:flex;gap:8px;margin-top:6px}
+.comment-input-row input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:0.82rem;outline:none}
+.comment-input-row input:focus{border-color:var(--accent)}
+
+/* Knowledge */
+.knowledge-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px;flex-wrap:wrap}
+.weekly-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(46,204,113,0.12);border-radius:20px;padding:5px 14px;font-size:0.75rem;color:var(--green)}
+.weekly-badge::before{content:'';width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.search-box{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;color:var(--text);font-size:0.92rem;outline:none;margin-bottom:16px;transition:var(--transition)}
+.search-box:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.search-results{margin-bottom:16px}
+.knowledge-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:12px;cursor:pointer;transition:var(--transition);position:relative;overflow:hidden}
+.knowledge-card:hover{border-color:var(--accent)}
+.knowledge-card.featured{border-color:var(--accent);box-shadow:0 0 20px var(--accent-glow)}
+.kc-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.kc-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px}
+.kc-title{font-weight:600;font-size:0.95rem;flex:1}
+.kc-category{font-size:0.65rem;padding:3px 8px;border-radius:8px;background:var(--surface2);color:var(--text-muted);white-space:nowrap}
+.kc-summary{font-size:0.82rem;color:var(--text-muted);margin-bottom:6px;line-height:1.5}
+.kc-detail{font-size:0.82rem;color:var(--text);line-height:1.7;display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.kc-detail.show{display:block}
+.kc-source{font-size:0.7rem;color:var(--text-muted);margin-top:8px}
+.know-add-btn{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:20px;padding:8px 18px;font-size:0.82rem;cursor:pointer;transition:var(--transition);margin-bottom:12px}
+.know-add-btn:hover{box-shadow:0 4px 16px var(--accent-glow)}
+.user-know-card{background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+
+/* Promotion Tab */
+.promo-stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px}
+.promo-stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 14px;text-align:center}
+.promo-stat-card .val{font-size:1.6rem;font-weight:700;color:var(--accent)}
+.promo-stat-card .lbl{font-size:0.75rem;color:var(--text-muted);margin-top:4px}
+.leaderboard-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);transition:var(--transition)}
+.leaderboard-item:hover{background:var(--surface2)}
+.leaderboard-rank{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;flex-shrink:0}
+.leaderboard-rank.top1{background:#f1c40f;color:#000}
+.leaderboard-rank.top2{background:#bdc3c7;color:#000}
+.leaderboard-rank.top3{background:#e67e22;color:#fff}
+.leaderboard-rank.normal{color:var(--text-muted)}
+.leaderboard-bar-wrap{flex:1;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.leaderboard-bar{height:100%;background:linear-gradient(90deg,var(--accent),#e55a2b);border-radius:4px;transition:width 0.6s ease}
+.chart-bars{display:flex;align-items:flex-end;gap:8px;height:140px;padding:8px 0}
+.chart-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
+.chart-bar{width:100%;border-radius:6px 6px 0 0;transition:height 0.5s ease;background:linear-gradient(180deg,var(--accent),rgba(255,107,53,0.3))}
+.chart-bar-label{font-size:0.62rem;color:var(--text-muted);text-align:center}
+.invite-card{background:linear-gradient(135deg,rgba(255,107,53,0.12),rgba(46,204,113,0.08));border:1px solid rgba(255,107,53,0.3);border-radius:var(--radius);padding:20px;text-align:center;margin-bottom:16px}
+.invite-card h3{font-size:1.1rem;margin-bottom:8px}
+.invite-card p{font-size:0.82rem;color:var(--text-muted);margin-bottom:14px}
+.feature-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:16px}
+.feature-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 12px;text-align:center;transition:var(--transition)}
+.feature-item:hover{border-color:var(--accent)}
+.feature-item .fi-icon{font-size:1.5rem;margin-bottom:6px}
+.feature-item .fi-title{font-size:0.82rem;font-weight:600}
+.feature-item .fi-desc{font-size:0.7rem;color:var(--text-muted);margin-top:4px}
+
+/* Avatar Picker */
+.avatar-picker-overlay{display:none;position:fixed;inset:0;z-index:250;background:rgba(0,0,0,0.8);align-items:center;justify-content:center}
+.avatar-picker-overlay.show{display:flex}
+.avatar-picker{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;max-width:420px;width:90%;max-height:80vh;overflow-y:auto}
+.avatar-picker h3{font-size:1rem;margin-bottom:14px;text-align:center}
+.avatar-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.avatar-option{width:64px;height:64px;border-radius:50%;border:3px solid transparent;cursor:pointer;transition:var(--transition);display:flex;align-items:center;justify-content:center;margin:0 auto;overflow:hidden}
+.avatar-option:hover{border-color:var(--accent);transform:scale(1.05)}
+.avatar-option.selected{border-color:var(--accent);box-shadow:0 0 16px var(--accent-glow)}
+.avatar-option img{width:100%;height:100%;object-fit:cover}
+.avatar-option svg{width:40px;height:40px}
+.avatar-upload-btn{width:100%;background:var(--surface2);border:1px dashed var(--border);border-radius:var(--radius-sm);padding:12px;color:var(--text-muted);text-align:center;cursor:pointer;transition:var(--transition);font-size:0.85rem;margin-bottom:12px}
+.avatar-upload-btn:hover{border-color:var(--accent);color:var(--accent)}
+.avatar-picker-actions{display:flex;gap:10px}
+.avatar-picker-actions button{flex:1}
+
+/* Profile */
+.profile-card{text-align:center;padding:28px 20px}
+.profile-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#e55a2b);margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;color:#fff;font-weight:700;overflow:hidden;cursor:pointer;position:relative}
+.profile-avatar img{width:100%;height:100%;object-fit:cover}
+.profile-avatar .edit-badge{position:absolute;bottom:0;right:0;width:22px;height:22px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px}
+.profile-name{font-size:1.2rem;font-weight:600}
+.profile-bio{font-size:0.82rem;color:var(--text-muted);margin:6px 0 4px}
+.profile-motto{font-size:0.78rem;color:var(--accent);font-style:italic;margin-bottom:8px}
+.profile-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+.ps-val{font-size:1.1rem;font-weight:700;color:var(--accent)}
+.ps-lbl{font-size:0.65rem;color:var(--text-muted)}
+.profile-streak-row{display:flex;justify-content:center;gap:16px;margin-top:12px;flex-wrap:wrap}
+.profile-streak-item{background:var(--surface2);border-radius:var(--radius-sm);padding:10px 16px;text-align:center;min-width:90px}
+.psc-val{font-size:1.4rem;font-weight:700;color:var(--accent)}
+.psc-lbl{font-size:0.7rem;color:var(--text-muted)}
+.month-mini-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;margin-top:6px}
+.month-mini-cal .mcell{aspect-ratio:1;font-size:0.62rem;border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--text-muted)}
+.month-mini-cal .mcell.cked{background:var(--accent);color:#fff;font-weight:600}
+
+/* Profile Popup */
+.profile-popup{display:none;position:fixed;inset:0;z-index:260;background:rgba(0,0,0,0.75);align-items:center;justify-content:center}
+.profile-popup.show{display:flex}
+.profile-popup-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;max-width:380px;width:90%;text-align:center;max-height:80vh;overflow-y:auto}
+.profile-popup-card .profile-avatar{width:64px;height:64px;font-size:1.5rem;cursor:default}
+.profile-popup-card .close-btn{position:absolute;top:8px;right:12px;background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer}
+
+/* Lightbox */
+.photo-lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:150;align-items:center;justify-content:center;cursor:pointer}
+.photo-lightbox.show{display:flex}
+.photo-lightbox img{max-width:90vw;max-height:90vh;border-radius:var(--radius);border:2px solid var(--border)}
+
+/* Share Modal */
+.share-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center}
+.share-modal-bg.show{display:flex}
+.share-modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;max-width:400px;width:90%;text-align:center}
+.share-modal canvas{border-radius:var(--radius-sm);max-width:100%}
+.share-btns{display:flex;gap:10px;margin-top:14px;justify-content:center;flex-wrap:wrap}
+
+/* Modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center}
+.modal-bg.show{display:flex}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;max-width:440px;width:90%;max-height:80vh;overflow-y:auto}
+.modal-box h3{font-size:1rem;margin-bottom:14px}
+.modal-box input,.modal-box textarea,.modal-box select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;color:var(--text);font-size:0.9rem;outline:none;margin-bottom:10px;font-family:inherit}
+.modal-box input:focus,.modal-box textarea:focus,.modal-box select:focus{border-color:var(--accent)}
+
+/* Toast */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:10px 24px;border-radius:20px;font-size:0.85rem;z-index:200;opacity:0;transition:opacity 0.3s;pointer-events:none}
+.toast.show{opacity:1}
+
+/* Bottom Nav */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:50;background:rgba(15,15,24,0.92);backdrop-filter:blur(14px);border-top:1px solid var(--border);display:flex;justify-content:space-around;height:var(--nav-h);align-items:center;padding:0 4px env(safe-area-inset-bottom,8px);overflow-x:auto}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.6rem;padding:4px 6px;transition:var(--transition);flex-shrink:0;min-width:52px}
+.nav-item svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2}
+.nav-item.active{color:var(--accent)}
+.nav-item .nav-badge{position:absolute;top:0;right:0;width:8px;height:8px;background:var(--accent);border-radius:50%}
+
+/* Empty */
+.empty-state{text-align:center;padding:28px 16px;color:var(--text-muted)}
+.empty-state svg{width:44px;height:44px;stroke:var(--text-muted);opacity:0.4;fill:none;stroke-width:1.5;margin-bottom:8px}
+
+/* Responsive */
+@media(max-width:480px){
+  .container{padding:14px 10px 0}
+  .form-row{grid-template-columns:1fr}
+  .history-stats{gap:8px;font-size:0.78rem}
+  .stat-value{font-size:1rem}
+  .stat-card{padding:10px 6px}
+  .header-title{font-size:1.2rem}
+  .post-actions{gap:10px}
+  .timer-circle{width:130px;height:130px}
+  .timer-display{font-size:2rem}
+  .stats-row{grid-template-columns:repeat(2,1fr);gap:6px}
+  .profile-stats{grid-template-columns:repeat(2,1fr)}
+  .promo-stat-grid{grid-template-columns:repeat(2,1fr)}
+  .feature-grid{grid-template-columns:repeat(2,1fr)}
+  .nav-item{font-size:0.55rem;padding:4px 4px;min-width:44px}
+  .nav-item svg{width:18px;height:18px}
+}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+<!-- ========== Auth Overlay ========== -->
+<div class="auth-overlay" id="authOverlay" style="display:none">
+<div class="auth-card">
+  <div class="auth-logo">
+    <div class="logo-icon"><svg viewBox="0 0 24 24"><polyline points="13 6 19 12 13 18"/><polyline points="5 6 11 12 5 18"/></svg></div>
+    <h2>Run<span>Track</span></h2>
+  </div>
+  <div class="auth-tabs">
+    <button class="auth-tab active" onclick="switchAuthTab('login')">登录</button>
+    <button class="auth-tab" onclick="switchAuthTab('register')">注册</button>
+  </div>
+  <div class="auth-form active" id="authFormLogin">
+    <div class="form-group"><label>用户名</label><input type="text" id="loginUser" placeholder="请输入用户名" autocomplete="username"></div>
+    <div class="form-group"><label>密码</label><input type="password" id="loginPass" placeholder="请输入密码" autocomplete="current-password"></div>
+    <div class="auth-error" id="loginError"></div>
+    <button class="auth-btn" onclick="doLogin()">登录</button>
+    <button class="auth-btn secondary" style="margin-top:10px" onclick="enterGuestMode()">游客模式</button>
+  </div>
+  <div class="auth-form" id="authFormReg">
+    <div class="form-group"><label>用户名</label><input type="text" id="regUser" placeholder="2-20位字母或中文" autocomplete="off"></div>
+    <div class="form-group"><label>密码</label><input type="password" id="regPass" placeholder="至少6位密码" autocomplete="new-password"></div>
+    <div class="form-group"><label>确认密码</label><input type="password" id="regPass2" placeholder="再次输入密码" autocomplete="new-password"></div>
+    <div class="auth-error" id="regError"></div>
+    <button class="auth-btn" onclick="doRegister()">注册</button>
+    <button class="auth-btn secondary" style="margin-top:10px" onclick="enterGuestMode()">游客模式</button>
+  </div>
+</div>
+</div>
+
+<!-- ========== Main App ========== -->
+<div id="mainApp" style="display:block">
+
+<div class="user-bar">
+  <div class="user-bar-left">
+    <div class="user-bar-avatar" id="userBarAvatar" onclick="openAvatarPicker()">R</div>
+    <span class="user-bar-name" id="userBarName">跑步者</span>
+    <span class="guest-badge" id="guestBadge" style="display:none" onclick="showGuestRegister()">游客</span>
+    <button class="user-bar-logout" id="guestLoginBtn" style="display:none;color:var(--accent);border-color:var(--accent);margin-left:4px" onclick="showGuestLogin()">登录</button>
+    <button class="user-bar-logout" id="guestRegBtn" style="display:none;color:var(--accent);border-color:var(--accent)" onclick="showGuestRegister()">注册</button>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="font-size:0.78rem;color:var(--text-muted)" id="userBarStreak"></span>
+    <button class="user-bar-logout" onclick="doLogout()">退出</button>
+  </div>
+</div>
+
+<!-- ===== Tab 1: 打卡 ===== -->
+<div class="tab-page active" id="tab-checkin">
+<div class="container">
+  <div class="header">
+    <div class="logo-icon"><svg viewBox="0 0 24 24"><polyline points="13 6 19 12 13 18"/><polyline points="5 6 11 12 5 18"/></svg></div>
+    <div class="header-title">Run<span>Track</span></div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-value" id="statDays">0</div><div class="stat-label">累计天数</div></div>
+    <div class="stat-card"><div class="stat-value" id="statDist">0.0</div><div class="stat-label">总里程(km)</div></div>
+    <div class="stat-card"><div class="stat-value" id="statTime">0h</div><div class="stat-label">总时长</div></div>
+    <div class="stat-card"><div class="stat-value" id="statStreak">0</div><div class="stat-label">连续打卡</div><div class="streak-badge" id="statStreakBadge"></div></div>
+  </div>
+
+  <!-- Timer -->
+  <div class="card">
+    <div class="card-title"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 15"/></svg>运动计时器 (0.01秒)</div>
+    <div class="timer-section">
+      <div class="timer-circle" id="timerCircle" onclick="toggleTimer()">
+        <div class="timer-display" id="timerDisplay">00:00<span class="ms">.00</span></div>
+        <div class="timer-label" id="timerLabel">点击开始</div>
+      </div>
+      <div class="timer-actions">
+        <button class="timer-btn primary" id="timerBtnMain" onclick="toggleTimer()">开始</button>
+        <button class="timer-btn" id="timerBtnReset" onclick="resetTimer()">重置</button>
+        <button class="timer-btn" id="timerBtnFill" onclick="fillTimerToForm()" style="display:none">填入用时</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GPS Track -->
+  <div class="card" id="gpsCard">
+    <div class="card-title"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/></svg>GPS运动轨迹</div>
+    <button class="gps-toggle" id="gpsToggle" onclick="toggleGPS()">
+      <span class="dot"></span> 实时追踪轨迹
+    </button>
+    <div class="gps-canvas-wrap" id="gpsCanvasWrap"><canvas id="gpsCanvas"></canvas></div>
+    <div class="gps-info" id="gpsInfo">坐标: --</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 15"/></svg>今日打卡</div>
+    <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="handlePhotoSelect(event)">
+      <button class="photo-add-btn" id="photoAddBtn" onclick="document.getElementById('photoInput').click()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>添加运动照片
+      </button>
+    </div>
+    <div class="photo-preview" id="photoPreview"></div>
+    <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:12px">支持 JPG/PNG，自动压缩至 200KB 以内</div>
+    <div class="form-row">
+      <div class="form-group"><label>距离 (km)</label><input type="number" id="distance" placeholder="如 5.0" step="0.1" min="0" inputmode="decimal"></div>
+      <div class="form-group"><label>用时 (min)</label><input type="number" id="duration" placeholder="如 30" step="1" min="0" inputmode="numeric"></div>
+      <div class="form-group"><label>卡路里(自动)</label><input type="number" id="calories" placeholder="自动计算" readonly style="opacity:0.75"></div>
+    </div>
+    <button class="btn" id="btnCheckin" onclick="doCheckin()"><span id="btnCheckinText">打卡</span></button>
+    <div style="margin-top:10px;font-size:0.72rem;color:var(--text-muted)" id="checkinHint"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>打卡日历</div>
+    <div class="calendar-header">
+      <button class="cal-nav-btn" onclick="changeMonth(-1)">上月</button>
+      <div class="calendar-month" id="calMonth"></div>
+      <button class="cal-nav-btn" onclick="changeMonth(1)">下月</button>
+    </div>
+    <div class="weekday-row"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+    <div class="calendar-grid" id="calendarGrid"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>最近记录</div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+</div>
+</div>
+
+<!-- ===== Tab 2: 社区 ===== -->
+<div class="tab-page" id="tab-community">
+<div class="container">
+  <div class="header">
+    <div class="logo-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 22c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></div>
+    <div class="header-title">跑步<span>社区</span></div>
+  </div>
+
+  <div class="post-composer">
+    <textarea id="postText" placeholder="分享你的跑步心情..."></textarea>
+    <div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap">
+      <input type="file" id="communityPhotoInput" accept="image/*" style="display:none" onchange="handleCommunityPhotoSelect(event)" multiple>
+      <button class="btn-sm" onclick="document.getElementById('communityPhotoInput').click()" style="white-space:nowrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>添加图片
+      </button>
+      <div class="location-row">
+        <input id="communityLocation" placeholder="输入位置...">
+        <button class="btn-sm" onclick="detectLocation('community')" style="white-space:nowrap">定位</button>
+        <label class="location-toggle"><input type="checkbox" id="communityHideLoc"> 不显示</label>
+      </div>
+    </div>
+    <div id="communityPhotoPreview" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div>
+    <div class="composer-bar">
+      <span style="font-size:0.75rem;color:var(--text-muted)">今天的跑步数据会自动附带</span>
+      <button class="btn-sm accent" onclick="publishPost()">发布动态</button>
+    </div>
+  </div>
+
+  <div id="postList"></div>
+</div>
+</div>
+
+<!-- ===== Tab 3: 知识 ===== -->
+<div class="tab-page" id="tab-knowledge">
+<div class="container">
+  <div class="header">
+    <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+    <div class="header-title">跑步<span>知识</span></div>
+  </div>
+
+  <input type="text" class="search-box" id="knowledgeSearch" placeholder="搜索知识、帖子、社区动态..." oninput="doKnowledgeSearch()">
+
+  <div class="knowledge-header">
+    <div class="weekly-badge">每周更新</div>
+    <button class="know-add-btn" onclick="openAddKnowledge()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>分享知识
+    </button>
+  </div>
+
+  <div id="knowledgeList"></div>
+  <div id="knowledgeSearchResults" style="display:none"></div>
+</div>
+</div>
+
+<!-- ===== Tab 4: 宣传 ===== -->
+<div class="tab-page" id="tab-promotion">
+<div class="container">
+  <div class="header">
+    <div class="logo-icon"><svg viewBox="0 0 24 24"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="22" x2="12" y2="15.5"/><polyline points="22 8.5 12 15.5 2 8.5"/></svg></div>
+    <div class="header-title">Run<span>Track</span> 宣传</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>网站数据统计</div>
+    <div class="promo-stat-grid">
+      <div class="promo-stat-card"><div class="val" id="promoUsers">-</div><div class="lbl">注册用户</div></div>
+      <div class="promo-stat-card"><div class="val" id="promoCheckins">-</div><div class="lbl">打卡次数</div></div>
+      <div class="promo-stat-card"><div class="val" id="promoDist">-</div><div class="lbl">总里程 (km)</div></div>
+      <div class="promo-stat-card"><div class="val" id="promoMAU">-</div><div class="lbl">月活跃用户</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><svg viewBox="0 0 24 24"><polyline points="6 9 12 4 18 9"/><polyline points="6 21 12 16 18 21"/></svg>用户里程排行榜 Top10</div>
+    <div id="promoLeaderboard"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="13" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>本周打卡趋势</div>
+    <div class="chart-bars" id="weeklyChart"></div>
+  </div>
+
+  <div class="invite-card">
+    <h3>邀请好友一起跑步</h3>
+    <p>分享 RunTrack 给你的跑友，一起记录每一步</p>
+    <button class="btn-sm accent" onclick="inviteFriend()">复制邀请链接</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>网站特色</div>
+    <div class="feature-grid">
+      <div class="feature-item"><div class="fi-icon">⏱️</div><div class="fi-title">精准计时</div><div class="fi-desc">0.01秒精度</div></div>
+      <div class="feature-item"><div class="fi-icon">\U0001f6f0️</div><div class="fi-title">GPS轨迹</div><div class="fi-desc">实时追踪</div></div>
+      <div class="feature-item"><div class="fi-icon">\U0001f4f8</div><div class="fi-title">图片分享</div><div class="fi-desc">记录精彩瞬间</div></div>
+      <div class="feature-item"><div class="fi-icon">\U0001f4da</div><div class="fi-title">知识库</div><div class="fi-desc">科学跑步</div></div>
+      <div class="feature-item"><div class="fi-icon">\U0001f525</div><div class="fi-title">连续打卡</div><div class="fi-desc">激励坚持</div></div>
+      <div class="feature-item"><div class="fi-icon">\U0001f3c6</div><div class="fi-title">排行榜</div><div class="fi-desc">互相激励</div></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ===== Tab 5: 我的 ===== -->
+<div class="tab-page" id="tab-profile">
+<div class="container">
+  <div class="header">
+    <div class="logo-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M4 22c0-5.5 3.6-10 8-10s8 4.5 8 10"/></svg></div>
+    <div class="header-title">我<span>的</span></div>
+  </div>
+
+  <div class="card profile-card">
+    <div class="profile-avatar" id="profileAvatar" onclick="openAvatarPicker()">R<div class="edit-badge">✎</div></div>
+    <div class="profile-name" id="profileName">跑步者</div>
+    <div class="profile-bio" id="profileBio">坚持跑步，热爱生活</div>
+    <div class="profile-motto" id="profileMotto"></div>
+
+    <div class="profile-streak-row">
+      <div class="profile-streak-item">
+        <div class="psc-val" id="psCurrentStreak">0</div>
+        <div class="psc-lbl">当前连续打卡</div>
+      </div>
+      <div class="profile-streak-item">
+        <div class="psc-val" id="psLongestStreak">0</div>
+        <div class="psc-lbl">历史最长连续</div>
+      </div>
+    </div>
+
+    <div class="profile-stats">
+      <div><div class="ps-val" id="psDays">0</div><div class="ps-lbl">打卡次数</div></div>
+      <div><div class="ps-val" id="psDist">0</div><div class="ps-lbl">总里程 km</div></div>
+      <div><div class="ps-val" id="psPosts">0</div><div class="ps-lbl">社区动态</div></div>
+      <div><div class="ps-val" id="psLongestDist">0</div><div class="ps-lbl">最长单次 km</div></div>
+    </div>
+
+    <div style="margin-top:14px;font-size:0.78rem;color:var(--text-muted)">
+      <div>总时长: <span id="psTotalDur" style="color:var(--text)">0h</span></div>
+      <div>平均配速: <span id="psAvgPace" style="color:var(--accent)">--</span></div>
+    </div>
+
+    <button class="btn-sm" style="margin-top:14px" onclick="openProfileEdit()">编辑资料</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">本月打卡小日历</div>
+    <div class="weekday-row"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+    <div class="month-mini-cal" id="monthMiniCal"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">设置</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn-sm" style="color:var(--red);border-color:var(--red);padding:10px 20px" onclick="doLogout()">退出登录</button>
+      <button class="btn-sm" onclick="clearAllData()" style="color:var(--red);border-color:rgba(231,76,60,0.4)">清除全部数据</button>
+    </div>
+  </div>
+</div>
+</div>
+
+</div><!-- end mainApp -->
+
+<!-- Modals -->
+<div class="photo-lightbox" id="photoLightbox" onclick="closeLightbox()"><img id="lightboxImg" src="" alt="运动照片"></div>
+
+<div class="share-modal-bg" id="shareModalBg" onclick="closeShareModal(event)">
+  <div class="share-modal" onclick="event.stopPropagation()">
+    <h3 style="margin-bottom:14px;font-size:1rem">打卡分享卡</h3>
+    <canvas id="shareCanvas" width="360" height="560"></canvas>
+    <div class="share-btns">
+      <button class="btn-sm accent" onclick="downloadShareCard()">下载图片</button>
+      <button class="btn-sm" onclick="copyShareLink()">复制链接</button>
+      <button class="btn-sm" onclick="closeShareModal()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="profileModalBg" onclick="if(event.target===this)closeProfileEdit()">
+  <div class="modal-box">
+    <h3>编辑资料</h3>
+    <input type="text" id="editName" placeholder="昵称">
+    <textarea id="editBio" placeholder="个人简介" rows="2"></textarea>
+    <input type="text" id="editMotto" placeholder="跑步格言 (如: 每一步都算数)">
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn-sm accent" onclick="saveProfile()" style="flex:1">保存</button>
+      <button class="btn-sm" onclick="closeProfileEdit()">取消</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="knowledgeModalBg" onclick="if(event.target===this)closeKnowledgeModal()">
+  <div class="modal-box">
+    <h3>分享知识</h3>
+    <input type="text" id="knowTitle" placeholder="标题">
+    <textarea id="knowContent" placeholder="内容" rows="4"></textarea>
+    <select id="knowCategory">
+      <option value="入门">入门</option><option value="进阶">进阶</option><option value="专业">专业</option>
+      <option value="安全">安全</option><option value="装备">装备</option>
+    </select>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <input type="file" id="knowPhotoInput" accept="image/*" style="display:none" onchange="handleKnowPhotoSelect(event)">
+      <button class="btn-sm" onclick="document.getElementById('knowPhotoInput').click()">添加图片</button>
+      <div id="knowPhotoPreview" style="max-width:120px;max-height:80px"></div>
+      <input id="knowLocation" placeholder="输入位置..." style="flex:1;min-width:80px;margin:0">
+      <button class="btn-sm" onclick="detectLocation('knowledge')">定位</button>
+      <label style="font-size:0.7rem;color:var(--text-muted);white-space:nowrap;display:flex;align-items:center;gap:3px"><input type="checkbox" id="knowHideLoc">不显示</label>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-sm accent" onclick="publishKnowledge()" style="flex:1">发布</button>
+      <button class="btn-sm" onclick="closeKnowledgeModal()">取消</button>
+    </div>
+  </div>
+</div>
+
+<div class="avatar-picker-overlay" id="avatarPickerOverlay" onclick="if(event.target===this)closeAvatarPicker()">
+  <div class="avatar-picker" onclick="event.stopPropagation()">
+    <h3>选择头像</h3>
+    <div class="avatar-grid" id="avatarGrid"></div>
+    <input type="file" id="avatarUploadInput" accept="image/*" style="display:none" onchange="handleAvatarUpload(event)">
+    <button class="avatar-upload-btn" onclick="document.getElementById('avatarUploadInput').click()">从相册选择...</button>
+    <div class="avatar-picker-actions">
+      <button class="btn-sm accent" onclick="confirmAvatar()">确定</button>
+      <button class="btn-sm" onclick="closeAvatarPicker()">取消</button>
+    </div>
+  </div>
+</div>
+
+<div class="profile-popup" id="profilePopup" onclick="if(event.target===this)closeProfilePopup()">
+  <div class="profile-popup-card" onclick="event.stopPropagation()" style="position:relative">
+    <button class="close-btn" onclick="closeProfilePopup()">&times;</button>
+    <div class="profile-avatar" id="popupAvatar">?</div>
+    <div class="profile-name" id="popupName"></div>
+    <div class="profile-bio" id="popupBio" style="font-size:0.82rem;color:var(--text-muted)"></div>
+    <div class="profile-streak-row" style="margin-top:8px">
+      <div class="profile-streak-item"><div class="psc-val" id="popupStreak">0</div><div class="psc-lbl">连续打卡</div></div>
+      <div class="profile-streak-item"><div class="psc-val" id="popupLongestStreak">0</div><div class="psc-lbl">历史最长</div></div>
+    </div>
+    <div class="profile-stats" style="margin-top:10px">
+      <div><div class="ps-val" id="popupDays">0</div><div class="ps-lbl">打卡次数</div></div>
+      <div><div class="ps-val" id="popupDist">0</div><div class="ps-lbl">总里程 km</div></div>
+    </div>
+    <div style="font-size:0.72rem;color:var(--text-muted);margin-top:8px" id="popupAge"></div>
+    <div style="font-size:0.75rem;color:var(--text-muted);margin-top:6px" id="popupRecent"></div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<div id="bottomNav" style="display:block">
+<div class="bottom-nav">
+  <button class="nav-item active" data-tab="tab-checkin" onclick="switchTab('tab-checkin')">
+    <svg viewBox="0 0 24 24"><polyline points="13 6 19 12 13 18"/><polyline points="5 6 11 12 5 18"/></svg><span>打卡</span>
+  </button>
+  <button class="nav-item" data-tab="tab-community" onclick="switchTab('tab-community')">
+    <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg><span>社区</span>
+  </button>
+  <button class="nav-item" data-tab="tab-knowledge" onclick="switchTab('tab-knowledge')">
+    <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>知识</span>
+  </button>
+  <button class="nav-item" data-tab="tab-promotion" onclick="switchTab('tab-promotion')">
+    <svg viewBox="0 0 24 24"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="22" x2="12" y2="15.5"/><polyline points="22 8.5 12 15.5 2 8.5"/></svg><span>宣传</span>
+  </button>
+  <button class="nav-item" data-tab="tab-profile" onclick="switchTab('tab-profile')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M4 22c0-5.5 3.6-10 8-10s8 4.5 8 10"/></svg><span>我的</span>
+  </button>
+</div>
+</div>
+
+
+<script src="app.js"></script>
+</body>
+</html>
